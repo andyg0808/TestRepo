@@ -14,36 +14,81 @@ var QuestionViewer = React.createClass({
       });
    },
    getInitialState: function() {
-      return {data: [], searchText: ''};
+      return {data: [], searchText: '', filters: {}};
    },
    componentDidMount: function() {
       this.loadCommentsFromServer();
       setInterval(this.loadCommentsFromServer, this.props.pollInterval);
    },
-   updateFilter: function(text) {
+   updateFilters: function(filters) {
+      this.setState({filters: filters});
+   },
+   updateSearch: function(text) {
       this.setState({searchText: text});
    },
    render: function() {
       return (
-         <div className="commentBox">
+         <div>
             <h2>Questions</h2>
-            <QuestionSearch search={this.state.searchText} onUpdate={this.updateFilter} />
-            <QuestionList data={this.state.data} search={this.state.searchText} />
+            <div className="col-sm-3">
+               <QuestionSearch search={this.state.searchText} onUpdate={this.updateSearch} />
+               <QuestionFilter data={this.state.data} onUpdate={this.updateFilters} />
+            </div>
+            <div className="col-sm-9">
+               <QuestionList data={this.state.data} search={this.state.searchText} filters={this.state.filters} />
+            </div>
          </div>
       );
    }
 });
 
 var QuestionSearch = React.createClass({
-   updateFilter: function() {
+   update: function() {
       this.props.onUpdate(
-         this.refs.filterInput.getDOMNode().value
+         this.refs.searchInput.getDOMNode().value
       );
    },
    render: function() {
       return (
          <form style={{"marginBottom": "10px"}}>
-            <input type="text" ref="filterInput" placeholder="Filter..." value={this.props.search} onChange={this.updateFilter} />
+            <input type="text" ref="searchInput" placeholder="Filter..." value={this.props.search} onChange={this.update} />
+         </form>
+      );
+   }
+});
+
+var QuestionFilter = React.createClass({
+   updateFilter: function() {
+      var filters = $(this.refs.filters.getDOMNode());
+      var checkedKeys = {};
+      filters.find('input').each(function() {
+         var checkbox = $(this);
+         if (checkbox.prop('checked')) {
+            checkedKeys[checkbox.val()] = true;
+         }
+      });
+      this.props.onUpdate(checkedKeys);
+   },
+   render: function() {
+      var keys = {};
+      this.props.data.forEach(function (comment) {
+         comment.keys.forEach(function (key) {
+            keys[key] = true;
+         });
+      });
+
+      var keywords = Object.keys(keys).map(function (key) {
+         return (
+            <div key={key} className="checkbox">
+               <label>
+                  <input onChange={this.updateFilter} value={key} type="checkbox" /> {key}
+               </label>
+            </div>
+         );
+      }, this);
+      return (
+         <form ref="filters" style={{"marginBottom": "10px"}}>
+            {keywords}
          </form>
       );
    }
@@ -52,13 +97,26 @@ var QuestionSearch = React.createClass({
 var QuestionList = React.createClass({
    render: function() {
       var search = new RegExp(this.props.search);
+      var filters = this.props.filters;
       var commentNodes = this.props.data.filter(function (comment) {
-         //console.log(search.source);
          if (search.source) {
             return comment.Q.search(search) > -1;
          } else {
             return true;
          }
+      }).filter(function (comment) {
+         if (Object.keys(filters).length === 0) {
+            return true;
+         }
+
+         var any = false;
+         comment.keys.forEach(function (key) {
+            if (filters[key]) {
+               any = true;
+            }
+         });
+
+         return any;
       }).map(function (comment) {
          return (
             <Question Q={comment.Q} A={comment.A}>
