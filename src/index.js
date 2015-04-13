@@ -146,7 +146,7 @@ var Question = React.createClass({
 
 $(function() {
    React.render(
-      <QuestionViewer url="/data.json" pollInterval={2000} />,
+      <QuestionViewer url="data.json" pollInterval={2000} />,
       document.getElementById('content')
    );
 })
