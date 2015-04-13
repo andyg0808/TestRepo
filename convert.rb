@@ -51,18 +51,26 @@ class Converter
    end
 
    def addText line
-      if not /^\s*$/ =~ line
+      if /^keys: / =~ line
+         @state = :keys
+         addKeys line
+      elsif not /^\s*$/ =~ line
          @description << line
       else
          finishQuestion
       end
    end
 
+   def addKeys line
+      @keys = line.split[1..-1]
+      finishQuestion
+   end
+
    def finishQuestion
       @questions << {
          "Q" => @question,
          "A" => @description.join(' '),
-         "keys" => []
+         "keys" => @keys
       }
       init_parse
    end
@@ -70,6 +78,7 @@ class Converter
    def init_parse
       @state = :start
       @notes = []
+      @keys = []
       @description = []
    end
 end
