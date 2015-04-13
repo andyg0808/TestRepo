@@ -1,7 +1,118 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>CPE 366 Knowledgebase</title>
+<!-- React parts -->
+<script src="https://fb.me/react-0.13.1.js"></script>
+<script src="https://fb.me/JSXTransformer-0.13.1.js"></script>
+
+<!-- JQuery -->
+<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+
+<!-- Markdown rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/0.3.1/showdown.min.js"></script>
+
+<!-- Bootstrap parts -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 </head>
 <body>
+<div class="container" id="content"></div>
+<script type="text/jsx">
+React.initializeTouchEvents(true);
+var converter = new Showdown.converter();
+var QuestionViewer = React.createClass({
+   loadCommentsFromServer: function() {
+      $.ajax({
+         url: "http://andyg0808.github.io/TestRepo/" + this.props.url,
+         dataType: 'json',
+         success: function(data) {
+            this.setState({data: data});
+         }.bind(this),
+         error: function(xhr, status, err) {
+            console.error(this.props.url, status, err.toString());
+         }.bind(this)
+      });
+   },
+   getInitialState: function() {
+      return {data: [], searchText: ''};
+   },
+   componentDidMount: function() {
+      this.loadCommentsFromServer();
+      setInterval(this.loadCommentsFromServer, this.props.pollInterval);
+   },
+   updateFilter: function(text) {
+      this.state.searchText = text;
+   },
+   render: function() {
+      return (
+         <div className="commentBox">
+            <h2>Questions</h2>
+            <QuestionSearch search={this.state.searchText} onUpdate={this.updateFilter} />
+            <QuestionList data={this.state.data} search={this.state.searchText} />
+         </div>
+      );
+   }
+});
+
+var QuestionSearch = React.createClass({
+   updateFilter: function() {
+      this.props.onUpdate(
+         this.refs.filterInput.getDOMNode().value
+      );
+   },
+   render: function() {
+      return (
+         <form style={{"marginBottom": "10px"}}>
+            <input type="text" ref="filterInput" placeholder="Filter..." value={this.props.search} onChange={this.updateFilter} />
+         </form>
+      );
+   }
+});
+
+var QuestionList = React.createClass({
+   render: function() {
+      var search = new RegExp(this.props.search);
+      var commentNodes = this.props.data.filter(function (comment) {
+         //console.log(search.source);
+         if (search.source) {
+            return comment.Q.search(search) > -1;
+         } else {
+            return true;
+         }
+      }).map(function (comment) {
+         return (
+            <Question Q={comment.Q} A={comment.A}>
+            </Question>
+         );
+      });
+      return (
+         <ul className="list-group">
+            {commentNodes}
+         </ul>
+      );
+   }
+});
+
+var Question = React.createClass({
+   render: function() {
+      return (
+         <li className="list-group-item">
+            <h3 className="commentAuthor">
+               {this.props.Q}
+            </h3>
+            {this.props.A}
+         </li>
+      );
+   }
+});
+
+React.render(
+   <QuestionViewer url="data.json" pollInterval={2000} />,
+   document.getElementById('content')
+);
+</script>
 </body>
 </html>
